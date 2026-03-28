@@ -20,9 +20,9 @@ enum DeleteCommand {
         )
       ),
       usageExamples: [
-        "remindctl delete 1",
-        "remindctl delete 4A83",
-        "remindctl delete 1 2 3 --force",
+        "apple_reminder_cli delete 1",
+        "apple_reminder_cli delete 4A83",
+        "apple_reminder_cli delete 1 2 3 --force",
       ]
     ) { values, runtime in
       let inputs = values.positional
@@ -30,9 +30,10 @@ enum DeleteCommand {
         throw ParsedValuesError.missingArgument("ids")
       }
 
+      let policy = try ReminderPolicy.load()
       let store = RemindersStore()
       try await store.requestAccess()
-      let reminders = try await store.reminders(in: nil)
+      let reminders = policy.filterReadable(try await store.reminders(in: nil))
       let resolved = try IDResolver.resolve(inputs, from: reminders)
 
       if values.flag("dryRun") {
@@ -45,6 +46,10 @@ enum DeleteCommand {
         if !Console.confirm(prompt, defaultValue: false) {
           return
         }
+      }
+
+      for reminder in resolved {
+        try policy.ensureAllowed(.delete, forListNamed: reminder.listName)
       }
 
       let count = try await store.deleteReminders(ids: resolved.map { $0.id })

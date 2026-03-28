@@ -1,7 +1,7 @@
 import Foundation
 
 @main
-enum RemindctlMain {
+enum AppleReminderCLIMain {
   static func main() async {
     let code = await CommandRouter().run()
     exit(code)

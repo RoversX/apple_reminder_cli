@@ -28,15 +28,20 @@ enum ShowCommand {
         )
       ),
       usageExamples: [
-        "remindctl",
-        "remindctl today",
-        "remindctl show overdue",
-        "remindctl show 2026-01-04",
-        "remindctl show --list Work",
+        "apple_reminder_cli",
+        "apple_reminder_cli today",
+        "apple_reminder_cli show overdue",
+        "apple_reminder_cli show 2026-01-04",
+        "apple_reminder_cli show --list Work",
       ]
     ) { values, runtime in
       let listName = values.option("list")
       let filterToken = values.argument(0)
+      let policy = try ReminderPolicy.load()
+
+      if let listName {
+        try policy.ensureReadable(listName: listName)
+      }
 
       let filter: ReminderFilter
       if let token = filterToken {
@@ -51,7 +56,7 @@ enum ShowCommand {
       let store = RemindersStore()
       try await store.requestAccess()
       let reminders = try await store.reminders(in: listName)
-      let filtered = ReminderFiltering.apply(reminders, filter: filter)
+      let filtered = ReminderFiltering.apply(policy.filterReadable(reminders), filter: filter)
       OutputRenderer.printReminders(filtered, format: runtime.outputFormat)
     }
   }

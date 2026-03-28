@@ -4,11 +4,11 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 source "$ROOT/version.env"
 
-APP_NAME="remindctl"
-CODESIGN_IDENTITY=${CODESIGN_IDENTITY:-"Developer ID Application: Peter Steinberger (Y5PE65HELJ)"}
-ENTITLEMENTS="${ROOT}/Resources/remindctl.entitlements"
+APP_NAME="apple_reminder_cli"
+CODESIGN_IDENTITY=${CODESIGN_IDENTITY:?'CODESIGN_IDENTITY env var is required (e.g. "Developer ID Application: Your Name (TEAMID)")'}
+ENTITLEMENTS="${ROOT}/Resources/apple_reminder_cli.entitlements"
 OUTPUT_DIR=${OUTPUT_DIR:-/tmp}
-ZIP_PATH="${OUTPUT_DIR}/remindctl-macos.zip"
+ZIP_PATH="${OUTPUT_DIR}/apple_reminder_cli-macos.zip"
 ARCHES_VALUE=${ARCHES:-"arm64 x86_64"}
 ARCH_LIST=( ${ARCHES_VALUE} )
 DIST_DIR="$(mktemp -d "/tmp/${APP_NAME}-dist.XXXXXX")"
@@ -30,23 +30,23 @@ echo "$APP_STORE_CONNECT_API_KEY_P8" | sed 's/\\n/\n/g' > "$API_KEY_FILE"
 "$ROOT/scripts/generate-version.sh"
 
 for ARCH in "${ARCH_LIST[@]}"; do
-  swift build -c release --product remindctl --arch "$ARCH"
+  swift build -c release --product apple_reminder_cli --arch "$ARCH"
 done
 
 BINARIES=()
 for ARCH in "${ARCH_LIST[@]}"; do
-  BINARIES+=("$ROOT/.build/${ARCH}-apple-macosx/release/remindctl")
+  BINARIES+=("$ROOT/.build/${ARCH}-apple-macosx/release/apple_reminder_cli")
 done
 
-lipo -create "${BINARIES[@]}" -output "$DIST_DIR/remindctl"
+lipo -create "${BINARIES[@]}" -output "$DIST_DIR/apple_reminder_cli"
 
 if [[ -f "$ENTITLEMENTS" ]]; then
   codesign --force --timestamp --options runtime --sign "$CODESIGN_IDENTITY" \
     --entitlements "$ENTITLEMENTS" \
-    "$DIST_DIR/remindctl"
+    "$DIST_DIR/apple_reminder_cli"
 else
   codesign --force --timestamp --options runtime --sign "$CODESIGN_IDENTITY" \
-    "$DIST_DIR/remindctl"
+    "$DIST_DIR/apple_reminder_cli"
 fi
 
 chmod -R u+rw "$DIST_DIR"
@@ -65,8 +65,8 @@ xcrun notarytool submit "$ZIP_PATH" \
   --issuer "$APP_STORE_CONNECT_ISSUER_ID" \
   --wait
 
-codesign --verify --strict --verbose=4 "$DIST_DIR/remindctl"
-if ! spctl -a -t exec -vv "$DIST_DIR/remindctl"; then
+codesign --verify --strict --verbose=4 "$DIST_DIR/apple_reminder_cli"
+if ! spctl -a -t exec -vv "$DIST_DIR/apple_reminder_cli"; then
   echo "spctl check failed (CLI binaries often report 'not an app')." >&2
 fi
 

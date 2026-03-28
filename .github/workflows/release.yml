@@ -41,26 +41,42 @@ jobs:
         run: scripts/generate-version.sh
 
       - name: Build
-        run: swift build -c release --product remindctl
+        run: |
+          swift build -c release --product apple_reminder_cli --arch arm64
+          swift build -c release --product apple_reminder_cli --arch x86_64
+          lipo -create -output .build/release/apple_reminder_cli \
+            .build/arm64-apple-macosx/release/apple_reminder_cli \
+            .build/x86_64-apple-macosx/release/apple_reminder_cli
 
       - name: Codesign
-        run: codesign --force --sign - --identifier com.steipete.remindctl .build/release/remindctl
+        run: codesign --force --sign - --identifier com.roversx.apple_reminder_cli .build/release/apple_reminder_cli
 
       - name: Package artifact
         run: |
           mkdir -p dist
-          cp .build/release/remindctl dist/remindctl
+          cp .build/release/apple_reminder_cli dist/apple_reminder_cli
           (
             cd dist
-            zip -r remindctl-macos.zip remindctl
+            zip -r apple_reminder_cli-macos.zip apple_reminder_cli
           )
 
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/remindctl-macos.zip
+          files: dist/apple_reminder_cli-macos.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Homebrew tap
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          curl -X POST \
+            -H "Authorization: token ${TAP_TOKEN}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/roversx/homebrew-tap/actions/workflows/update-formula.yml/dispatches \
+            -d "{\"ref\":\"main\",\"inputs\":{\"formula\":\"apple_reminder_cli\",\"tag\":\"${TAG}\",\"repository\":\"roversx/apple_reminder_cli\"}}"
 
       - name: Update GitHub release notes from CHANGELOG
         shell: bash

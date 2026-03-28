@@ -19,9 +19,9 @@ enum CompleteCommand {
         )
       ),
       usageExamples: [
-        "remindctl complete 1",
-        "remindctl complete 1 2 3",
-        "remindctl complete 4A83",
+        "apple_reminder_cli complete 1",
+        "apple_reminder_cli complete 1 2 3",
+        "apple_reminder_cli complete 4A83",
       ]
     ) { values, runtime in
       let inputs = values.positional
@@ -29,14 +29,19 @@ enum CompleteCommand {
         throw ParsedValuesError.missingArgument("ids")
       }
 
+      let policy = try ReminderPolicy.load()
       let store = RemindersStore()
       try await store.requestAccess()
-      let reminders = try await store.reminders(in: nil)
+      let reminders = policy.filterReadable(try await store.reminders(in: nil))
       let resolved = try IDResolver.resolve(inputs, from: reminders)
 
       if values.flag("dryRun") {
         OutputRenderer.printReminders(resolved, format: runtime.outputFormat)
         return
+      }
+
+      for reminder in resolved {
+        try policy.ensureAllowed(.complete, forListNamed: reminder.listName)
       }
 
       let updated = try await store.completeReminders(ids: resolved.map { $0.id })

@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help format lint test check build remindctl clean
+.PHONY: help format lint test check build apple_reminder_cli clean
 
 help:
 	@printf "%s\n" \
@@ -9,7 +9,7 @@ help:
 		"make test      - sync version + swift test (coverage enabled)" \
 		"make check     - lint + test + coverage gate" \
 		"make build     - release build into bin/ (codesigned)" \
-		"make remindctl - clean rebuild + run debug binary (ARGS=...)" \
+		"make apple_reminder_cli - clean rebuild + run debug binary (ARGS=...)" \
 		"make clean     - swift package clean"
 
 format:
@@ -31,15 +31,18 @@ check:
 build:
 	scripts/generate-version.sh
 	mkdir -p bin
-	swift build -c release --product remindctl
-	cp .build/release/remindctl bin/remindctl
-	codesign --force --sign - --identifier com.steipete.remindctl bin/remindctl
+	swift build -c release --product apple_reminder_cli --arch arm64
+	swift build -c release --product apple_reminder_cli --arch x86_64
+	lipo -create -output bin/apple_reminder_cli \
+		.build/arm64-apple-macosx/release/apple_reminder_cli \
+		.build/x86_64-apple-macosx/release/apple_reminder_cli
+	codesign --force --sign - --identifier com.roversx.apple_reminder_cli bin/apple_reminder_cli
 
-remindctl:
+apple_reminder_cli:
 	scripts/generate-version.sh
 	swift package clean
-	swift build -c debug --product remindctl
-	./.build/debug/remindctl $(ARGS)
+	swift build -c debug --product apple_reminder_cli
+	./.build/debug/apple_reminder_cli $(ARGS)
 
 clean:
 	swift package clean

@@ -29,11 +29,11 @@ enum ListCommand {
         )
       ),
       usageExamples: [
-        "remindctl list",
-        "remindctl list Work",
-        "remindctl list Work --rename Office",
-        "remindctl list Work --delete",
-        "remindctl list Projects --create",
+        "apple_reminder_cli list",
+        "apple_reminder_cli list Work",
+        "apple_reminder_cli list Work --rename Office",
+        "apple_reminder_cli list Work --delete",
+        "apple_reminder_cli list Projects --create",
       ]
     ) { values, runtime in
       let name = values.argument(0)
@@ -41,6 +41,19 @@ enum ListCommand {
       let deleteList = values.flag("delete")
       let createList = values.flag("create")
       let force = values.flag("force")
+      let policy = try ReminderPolicy.load()
+
+      if let name {
+        if deleteList {
+          try policy.ensureAllowed(.deleteList, forListNamed: name)
+        } else if renameTo != nil {
+          try policy.ensureAllowed(.renameList, forListNamed: name)
+        } else if createList {
+          try policy.ensureAllowed(.createList, forListNamed: name)
+        } else {
+          try policy.ensureReadable(listName: name)
+        }
+      }
 
       let store = RemindersStore()
       try await store.requestAccess()
@@ -81,12 +94,12 @@ enum ListCommand {
         }
 
         let reminders = try await store.reminders(in: name)
-        OutputRenderer.printReminders(reminders, format: runtime.outputFormat)
+        OutputRenderer.printReminders(policy.filterReadable(reminders), format: runtime.outputFormat)
         return
       }
 
-      let lists = await store.lists()
-      let reminders = try await store.reminders(in: nil)
+      let lists = policy.filterVisible(await store.lists())
+      let reminders = policy.filterReadable(try await store.reminders(in: nil))
 
       let startOfToday = Calendar.current.startOfDay(for: Date())
       var counts: [String: (total: Int, overdue: Int)] = [:]

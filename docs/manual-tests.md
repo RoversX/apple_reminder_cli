@@ -4,17 +4,17 @@
 Run on a local GUI session (not SSH-only) so the Reminders permission prompt can appear.
 
 ## Test data
-- Use a dedicated list: `remindctl-manual-YYYYMMDD` (create if missing).
+- Use a dedicated list: `apple_reminder_cli-manual-YYYYMMDD` (create if missing).
 - Create 3 reminders with distinct states:
-  - `remindctl test A` (due today, priority high)
-  - `remindctl test B` (due tomorrow)
-  - `remindctl test C` (no due date)
+  - `apple_reminder_cli test A` (due today, priority high)
+  - `apple_reminder_cli test B` (due tomorrow)
+  - `apple_reminder_cli test C` (no due date)
 
 ## Checklist
-- authorize: `remindctl authorize`
-- status: `remindctl status`
-- list lists: `remindctl list`
-- list list contents: `remindctl list "remindctl-manual-YYYYMMDD"`
+- authorize: `apple_reminder_cli authorize`
+- status: `apple_reminder_cli status`
+- list lists: `apple_reminder_cli list`
+- list list contents: `apple_reminder_cli list "apple_reminder_cli-manual-YYYYMMDD"`
 - add reminders (3 variants)
 - show filters: `today`, `tomorrow`, `week`, `overdue`, `upcoming`, `completed`, `all`
 - edit: update title/notes/priority/due date

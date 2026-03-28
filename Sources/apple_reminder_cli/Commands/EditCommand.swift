@@ -33,19 +33,20 @@ enum EditCommand {
         )
       ),
       usageExamples: [
-        "remindctl edit 1 --title \"New title\"",
-        "remindctl edit 4A83 --due tomorrow",
-        "remindctl edit 2 --priority high --notes \"Call before noon\"",
-        "remindctl edit 3 --clear-due",
+        "apple_reminder_cli edit 1 --title \"New title\"",
+        "apple_reminder_cli edit 4A83 --due tomorrow",
+        "apple_reminder_cli edit 2 --priority high --notes \"Call before noon\"",
+        "apple_reminder_cli edit 3 --clear-due",
       ]
     ) { values, runtime in
       guard let input = values.argument(0) else {
         throw ParsedValuesError.missingArgument("id")
       }
 
+      let policy = try ReminderPolicy.load()
       let store = RemindersStore()
       try await store.requestAccess()
-      let reminders = try await store.reminders(in: nil)
+      let reminders = policy.filterReadable(try await store.reminders(in: nil))
       let resolved = try IDResolver.resolve([input], from: reminders)
       guard let reminder = resolved.first else {
         throw RemindCoreError.reminderNotFound(input)
@@ -80,6 +81,20 @@ enum EditCommand {
 
       if title == nil && listName == nil && notes == nil && dueUpdate == nil && priority == nil && isCompleted == nil {
         throw RemindCoreError.operationFailed("No changes specified")
+      }
+
+      var requiredCapabilities: Set<ReminderPolicyCapability> = []
+      if title != nil || notes != nil || dueUpdate != nil || priority != nil || listName != nil {
+        requiredCapabilities.insert(.edit)
+      }
+      if isCompleted != nil {
+        requiredCapabilities.insert(.complete)
+      }
+      for capability in requiredCapabilities {
+        try policy.ensureAllowed(capability, forListNamed: reminder.listName)
+      }
+      if let listName, listName != reminder.listName {
+        try policy.ensureAllowed(.add, forListNamed: listName)
       }
 
       let update = ReminderUpdate(

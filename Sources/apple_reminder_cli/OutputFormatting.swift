@@ -20,6 +20,19 @@ struct AuthorizationSummary: Codable, Sendable, Equatable {
   let authorized: Bool
 }
 
+struct PolicyListSummary: Codable, Sendable, Equatable {
+  let name: String
+  let configured: ReminderPolicyRule?
+  let effective: EffectiveReminderPolicyRule
+}
+
+struct PolicySummary: Codable, Sendable, Equatable {
+  let path: String
+  let authorizationStatus: String
+  let defaults: EffectiveReminderPolicyRule
+  let lists: [PolicyListSummary]
+}
+
 enum OutputRenderer {
   static func printReminders(_ reminders: [ReminderItem], format: OutputFormat) {
     switch format {
@@ -88,6 +101,40 @@ enum OutputRenderer {
     }
   }
 
+  static func printPolicy(_ summary: PolicySummary, format: OutputFormat) {
+    switch format {
+    case .standard:
+      printPolicyStandard(summary)
+    case .plain:
+      printPolicyPlain(summary)
+    case .json:
+      printJSON(summary)
+    case .quiet:
+      Swift.print(summary.lists.count)
+    }
+  }
+
+  static func printPolicyLists(_ entries: [PolicyListEntry], format: OutputFormat) {
+    switch format {
+    case .standard:
+      if entries.isEmpty {
+        Swift.print("No lists found")
+        return
+      }
+      for entry in entries.sorted(by: { $0.name < $1.name }) {
+        Swift.print("\(entry.name)\(entry.hasOverride ? " [override]" : "")")
+      }
+    case .plain:
+      for entry in entries.sorted(by: { $0.name < $1.name }) {
+        Swift.print("\(entry.name)\t\(entry.hasOverride ? "1" : "0")")
+      }
+    case .json:
+      printJSON(entries)
+    case .quiet:
+      Swift.print(entries.count)
+    }
+  }
+
   private static func printRemindersStandard(_ reminders: [ReminderItem]) {
     let sorted = ReminderFiltering.sort(reminders)
     guard !sorted.isEmpty else {
@@ -136,6 +183,58 @@ enum OutputRenderer {
     for summary in summaries.sorted(by: { $0.title < $1.title }) {
       Swift.print("\(summary.title)\t\(summary.reminderCount)\t\(summary.overdueCount)")
     }
+  }
+
+  private static func printPolicyStandard(_ summary: PolicySummary) {
+    Swift.print("Policy file: \(summary.path)")
+    Swift.print("Reminders access: \(summary.authorizationStatus)")
+    Swift.print("")
+    Swift.print("Defaults:")
+    for capability in ReminderPolicyCapability.allCases {
+      Swift.print("  \(capability.rawValue): \(summary.defaults.value(for: capability) ? "allow" : "deny")")
+    }
+
+    if summary.lists.isEmpty {
+      Swift.print("")
+      Swift.print("Lists:")
+      Swift.print("  No list-specific policy entries")
+      return
+    }
+
+    Swift.print("")
+    Swift.print("Lists:")
+    for list in summary.lists.sorted(by: { $0.name < $1.name }) {
+      Swift.print("  \(list.name)")
+      if let configured = list.configured {
+        Swift.print("    overrides: \(configuredOverrideString(configured))")
+      } else {
+        Swift.print("    overrides: (none)")
+      }
+      Swift.print("    effective: \(effectiveRuleString(list.effective))")
+    }
+  }
+
+  private static func printPolicyPlain(_ summary: PolicySummary) {
+    Swift.print(["path", summary.path, summary.authorizationStatus].joined(separator: "\t"))
+    Swift.print(["defaults", effectiveRuleString(summary.defaults)].joined(separator: "\t"))
+    for list in summary.lists.sorted(by: { $0.name < $1.name }) {
+      let configured = list.configured.map(configuredOverrideString) ?? ""
+      Swift.print(["list", list.name, configured, effectiveRuleString(list.effective)].joined(separator: "\t"))
+    }
+  }
+
+  private static func configuredOverrideString(_ rule: ReminderPolicyRule) -> String {
+    let parts = ReminderPolicyCapability.allCases.compactMap { capability -> String? in
+      guard let value = rule.configuredValue(for: capability) else { return nil }
+      return "\(capability.rawValue)=\(value ? "allow" : "deny")"
+    }
+    return parts.isEmpty ? "(none)" : parts.joined(separator: ", ")
+  }
+
+  private static func effectiveRuleString(_ rule: EffectiveReminderPolicyRule) -> String {
+    ReminderPolicyCapability.allCases
+      .map { "\($0.rawValue)=\(rule.value(for: $0) ? "allow" : "deny")" }
+      .joined(separator: ", ")
   }
 
   private static func printJSON<T: Encodable>(_ payload: T) {

@@ -9,12 +9,12 @@ enum PermissionsHelp {
       return []
     case .notDetermined:
       return [
-        "Run `remindctl authorize` to trigger the system prompt.",
-        "If needed, open \(settingsPath) and allow Terminal (or remindctl).",
+        "Run `apple_reminder_cli authorize` to trigger the system prompt.",
+        "If needed, open \(settingsPath) and allow Terminal (or apple_reminder_cli).",
       ]
     case .denied, .restricted:
       return [
-        "Grant access in \(settingsPath) for Terminal (or remindctl).",
+        "Grant access in \(settingsPath) for Terminal (or apple_reminder_cli).",
         "If running over SSH, grant access on the Mac that runs the command.",
       ]
     case .writeOnly:

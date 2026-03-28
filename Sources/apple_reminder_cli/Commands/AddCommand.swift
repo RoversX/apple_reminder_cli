@@ -28,9 +28,9 @@ enum AddCommand {
         )
       ),
       usageExamples: [
-        "remindctl add \"Buy milk\"",
-        "remindctl add --title \"Call mom\" --list Personal --due tomorrow",
-        "remindctl add \"Review docs\" --priority high",
+        "apple_reminder_cli add \"Buy milk\"",
+        "apple_reminder_cli add --title \"Call mom\" --list Personal --due tomorrow",
+        "apple_reminder_cli add \"Review docs\" --priority high",
       ]
     ) { values, runtime in
       let titleOption = values.option("title")
@@ -60,6 +60,11 @@ enum AddCommand {
       let dueDate = try dueValue.map(CommandHelpers.parseDueDate)
       let priority = try priorityValue.map(CommandHelpers.parsePriority) ?? .none
 
+      let policy = try ReminderPolicy.load()
+      if let listName {
+        try policy.ensureAllowed(.add, forListNamed: listName)
+      }
+
       let store = RemindersStore()
       try await store.requestAccess()
 
@@ -72,6 +77,7 @@ enum AddCommand {
       guard let targetList else {
         throw RemindCoreError.operationFailed("No default list found. Specify --list.")
       }
+      try policy.ensureAllowed(.add, forListNamed: targetList)
 
       let draft = ReminderDraft(title: title, notes: notes, dueDate: dueDate, priority: priority)
       let reminder = try await store.createReminder(draft, listName: targetList)
