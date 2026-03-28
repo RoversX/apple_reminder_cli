@@ -39,10 +39,6 @@ enum ShowCommand {
       let filterToken = values.argument(0)
       let policy = try ReminderPolicy.load()
 
-      if let listName {
-        try policy.ensureReadable(listName: listName)
-      }
-
       let filter: ReminderFilter
       if let token = filterToken {
         guard let parsed = ReminderFiltering.parse(token) else {
@@ -51,6 +47,14 @@ enum ShowCommand {
         filter = parsed
       } else {
         filter = .today
+      }
+
+      if let listName {
+        if filter == .completed {
+          try policy.ensureAllowed(.readCompleted, forListNamed: listName)
+        } else {
+          try policy.ensureReadable(listName: listName)
+        }
       }
 
       let store = RemindersStore()

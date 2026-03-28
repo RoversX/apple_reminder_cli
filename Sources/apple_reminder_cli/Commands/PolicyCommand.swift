@@ -21,6 +21,8 @@ enum PolicyCommand {
           apple_reminder_cli policy set defaults <capability> <allow|deny>
           apple_reminder_cli policy set <list> <capability> <allow|deny>
           apple_reminder_cli policy unset <list> <capability>
+
+        Enabling readCompleted requires interactive confirmation from the user.
         """,
       signature: CommandSignatures.withRuntimeFlags(
         CommandSignature(
@@ -100,6 +102,13 @@ enum PolicyCommand {
       throw RemindCoreError.operationFailed("Value must be allow or deny.")
     }
 
+    try confirmSensitiveGrantIfNeeded(
+      target: target,
+      capability: capability,
+      decision: decision,
+      runtime: runtime
+    )
+
     var document = policy.document
     if target == "defaults" {
       document.defaults = document.defaults.setting(capability, to: decision)
@@ -123,6 +132,33 @@ enum PolicyCommand {
     } else if runtime.outputFormat == .standard {
       Swift.print("Set \(target).\(capability.rawValue) = \(decision ? "allow" : "deny")")
     }
+  }
+
+  static func confirmSensitiveGrantIfNeeded(
+    target: String,
+    capability: ReminderPolicyCapability,
+    decision: Bool,
+    runtime: RuntimeOptions,
+    isTTY: Bool = Console.isTTY,
+    confirm: (String, Bool) -> Bool = Console.confirm
+  ) throws {
+    guard capability == .readCompleted, decision else { return }
+    guard runtime.outputFormat == .standard, isTTY, !runtime.noInput else {
+      throw RemindCoreError.operationFailed(
+        "Granting access to completed reminder history requires an interactive terminal and explicit user confirmation."
+      )
+    }
+
+    if !confirm(readCompletedGrantPrompt(for: target), false) {
+      throw RemindCoreError.operationFailed("User declined to grant access to completed reminder history.")
+    }
+  }
+
+  static func readCompletedGrantPrompt(for target: String) -> String {
+    if target == "defaults" {
+      return "Allow reading completed reminder history for all lists?"
+    }
+    return "Allow reading completed reminder history for list \"\(target)\"?"
   }
 
   private static func handleUnset(

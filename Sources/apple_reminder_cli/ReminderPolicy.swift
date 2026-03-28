@@ -177,6 +177,13 @@ enum ReminderPolicyError: LocalizedError, Equatable {
   var errorDescription: String? {
     switch self {
     case .blocked(let action, let listName, let policyPath):
+      if action == ReminderPolicyCapability.readCompleted.description {
+        return [
+          "Reading completed reminders is blocked by local policy for list \"\(listName)\".",
+          "Ask the user for permission to access completed reminder history for this list.",
+          "If approved, update \(policyPath).",
+        ].joined(separator: " ")
+      }
       return "Policy blocks \(action) for list \"\(listName)\". Update \(policyPath) to change this behavior."
     case .invalidConfiguration(let path, let details):
       return "Invalid policy configuration at \(path): \(details)"
