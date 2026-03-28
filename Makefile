@@ -30,13 +30,16 @@ check:
 
 build:
 	scripts/generate-version.sh
-	mkdir -p bin
+	mkdir -p bin dist
 	swift build -c release --product apple_reminder_cli --arch arm64
 	swift build -c release --product apple_reminder_cli --arch x86_64
 	lipo -create -output bin/apple_reminder_cli \
 		.build/arm64-apple-macosx/release/apple_reminder_cli \
 		.build/x86_64-apple-macosx/release/apple_reminder_cli
 	codesign --force --sign - --identifier com.roversx.apple_reminder_cli bin/apple_reminder_cli
+	cp bin/apple_reminder_cli dist/apple_reminder_cli
+	cd dist && zip -r apple_reminder_cli-macos.zip apple_reminder_cli
+	@echo "sha256: $$(shasum -a 256 dist/apple_reminder_cli-macos.zip | awk '{print $$1}')"
 
 apple_reminder_cli:
 	scripts/generate-version.sh
