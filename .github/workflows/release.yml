@@ -79,24 +79,3 @@ jobs:
             https://api.github.com/repos/roversx/homebrew-tap/actions/workflows/update-formula.yml/dispatches \
             -d "{\"ref\":\"main\",\"inputs\":{\"formula\":\"apple_reminder_cli\",\"tag\":\"${TAG}\",\"repository\":\"roversx/apple_reminder_cli\"}}"
 
-      - name: Update GitHub release notes from CHANGELOG
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.tag.outputs.tag }}
-        run: |
-          version="${TAG#v}"
-          notes_file="/tmp/release-notes.md"
-
-          awk -v v="$version" '
-            $0 ~ ("^## " v "($|[[:space:]]-)") { in_section=1; next }
-            in_section && $0 ~ "^## " { exit }
-            in_section { print }
-          ' CHANGELOG.md > "$notes_file"
-
-          if ! grep -q '[^[:space:]]' "$notes_file"; then
-            echo "No CHANGELOG.md section found for version $version" >&2
-            exit 1
-          fi
-
-          gh release edit "$TAG" --notes-file "$notes_file"
