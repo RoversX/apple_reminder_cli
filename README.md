@@ -1,7 +1,5 @@
 # apple_reminder_cli
 
-Forget the app, not the task ✅
-
 Fast CLI for Apple Reminders on macOS.
 
 This repository is based on [steipete/remindctl](https://github.com/steipete/remindctl) and continues in the same direction with project-specific improvements.
@@ -10,6 +8,8 @@ Notable additions in this fork:
 - stronger permissions flow for Reminders access, including explicit `authorize`, `status`, and guided `permission-setting` commands
 - local per-list policy controls for reads, edits, deletes, completion, and list management
 - clearer agent/automation-oriented behavior through JSON/plain output modes and policy-aware safeguards
+
+![screenshot](public/screenshot.png)
 
 ## Install
 
