@@ -53,18 +53,20 @@ jobs:
 
       - name: Package artifact
         run: |
+          VERSION="${{ steps.tag.outputs.tag }}"
+          VERSION="${VERSION#v}"
           mkdir -p dist
           cp .build/release/apple_reminder_cli dist/apple_reminder_cli
           (
             cd dist
-            zip -r apple_reminder_cli-macos.zip apple_reminder_cli
+            zip -r "apple_reminder_cli${VERSION}.zip" apple_reminder_cli
           )
 
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
-          files: dist/apple_reminder_cli-macos.zip
+          files: dist/apple_reminder_cli*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
